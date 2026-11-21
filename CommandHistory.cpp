@@ -1,15 +1,20 @@
 #include "CommandHistory.h"
 
-void CommandHistory::push(
+bool CommandHistory::execute(
     std::unique_ptr<Command> command
 )
 {
-    if (command != nullptr)
+    if (command == nullptr ||
+        !command->execute())
     {
-        commands.push_back(
-            std::move(command)
-        );
+        return false;
     }
+
+    commands.push_back(
+        std::move(command)
+    );
+
+    return true;
 }
 
 bool CommandHistory::undo()
@@ -19,7 +24,11 @@ bool CommandHistory::undo()
         return false;
     }
 
-    commands.back()->undo();
+    if (!commands.back()->undo())
+    {
+        return false;
+    }
+
     commands.pop_back();
 
     return true;
@@ -28,9 +37,4 @@ bool CommandHistory::undo()
 bool CommandHistory::empty() const
 {
     return commands.empty();
-}
-
-void CommandHistory::clear()
-{
-    commands.clear();
 }
