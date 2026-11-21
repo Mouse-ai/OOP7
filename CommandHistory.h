@@ -12,13 +12,9 @@ private:
     std::vector<std::unique_ptr<Command>> commands;
 
 public:
-    void push(std::unique_ptr<Command> command);
-
+    bool execute(std::unique_ptr<Command> command);
     bool undo();
-
     bool empty() const;
-
-    void clear();
 };
 
 #endif
