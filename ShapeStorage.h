@@ -19,6 +19,13 @@ private:
 
     bool findPathRecursive(Shape* current,Shape* target,const QString& currentPath,QString& result) const;
     Shape* resolvePath(const std::vector<Shape*>& rootShapes,const QString& path) const;
+    bool saveToStream(QTextStream& out) const;
+
+    bool loadFromStream(
+        QTextStream& in,
+        const ShapeFactory& factory,
+        const QRect& bounds
+    );
 public:
     void add(Shape *shape);
 
@@ -44,6 +51,13 @@ public:
     Arrow* getArrow(int index) const;
     void removeArrowsReferencing(Shape* shape);
     void removeArrowsDirectlyReferencing(Shape* shape);
+    QString createSnapshot() const;
+
+    bool restoreSnapshot(
+        const QString& data,
+        const ShapeFactory& factory,
+        const QRect& bounds
+    );
 };
 
 

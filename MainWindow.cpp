@@ -15,22 +15,36 @@
 #include "ShapeFactory.h"
 #include "Arrow.h"
 #include <QStatusBar>
+#include "SnapshotCommand.h"
+#include <memory>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setFocusPolicy(Qt::StrongFocus);
     setupActions();
+
     QWidget *workArea = new QWidget(this);
     workArea->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     setCentralWidget(workArea);
+
     QDockWidget* treeDock =
-    new QDockWidget("Дерево объектов", this);
+        new QDockWidget("Дерево объектов", this);
 
     shapeTree =
         new ShapeTreeWidget(&storage, treeDock);
-    connect(shapeTree,&ShapeTreeWidget::shapeSelectionChanged,this,[this](){
-        update();});
+
+    connect(
+        shapeTree,
+        &ShapeTreeWidget::shapeSelectionChanged,
+        this,
+        [this]()
+        {
+            update();
+        }
+    );
+
     treeDock->setWidget(shapeTree);
 
     addDockWidget(
@@ -38,6 +52,65 @@ MainWindow::MainWindow(QWidget *parent)
         treeDock
     );
 }
+
+void MainWindow::executeUndoable(
+    const std::function<void()>& action
+)
+{
+    QString beforeState =
+        storage.createSnapshot();
+
+    action();
+
+    recordCommand(beforeState);
+}
+
+void MainWindow::recordCommand(
+    const QString& beforeState
+)
+{
+    QString afterState =
+        storage.createSnapshot();
+
+    if (beforeState.isEmpty() ||
+        afterState.isEmpty() ||
+        beforeState == afterState)
+    {
+        return;
+    }
+
+    commandHistory.push(
+        std::make_unique<SnapshotCommand>(
+            storage,
+            undoFactory,
+            getWorkAreaRect(),
+            beforeState,
+            afterState
+        )
+    );
+
+    undoAction->setEnabled(true);
+}
+
+void MainWindow::undoLastCommand()
+{
+    creatingArrow = false;
+    arrowSource = nullptr;
+
+    statusBar()->clearMessage();
+
+    if (!commandHistory.undo())
+    {
+        return;
+    }
+
+    undoAction->setEnabled(
+        !commandHistory.empty()
+    );
+
+    update();
+}
+
 void MainWindow::changeSelectedColor()
 {
     QColor newColor = QColorDialog::getColor();
@@ -47,24 +120,32 @@ void MainWindow::changeSelectedColor()
         return;
     }
 
-    for (int i = 0; i < storage.getCount(); i++)
-    {
-        Shape *shape = storage.getObject(i);
-
-        if (shape->isSelected())
+    executeUndoable(
+        [this, newColor]()
         {
-            shape->setColor(newColor);
-        }
-    }
+            for (int i = 0; i < storage.getCount(); i++)
+            {
+                Shape *shape = storage.getObject(i);
 
-    storage.clearSelection();
-    storage.notifyObservers();
+                if (shape->isSelected())
+                {
+                    shape->setColor(newColor);
+                }
+            }
+
+            storage.clearSelection();
+            storage.notifyObservers();
+        }
+    );
+
     update();
 }
+
 QRect MainWindow::getWorkAreaRect() const
 {
     return centralWidget()->geometry();
 }
+
 void MainWindow::setupActions()
 {
     circleAction = new QAction("Круг", this);
@@ -77,71 +158,149 @@ void MainWindow::setupActions()
     groupAction = new QAction("Сгруппировать", this);
     saveAction = new QAction("Сохранить", this);
     loadAction = new QAction("Загрузить", this);
-
     arrowAction = new QAction("Стрелка A → B", this);
+    undoAction = new QAction("Отменить", this);
 
-    connect(arrowAction,&QAction::triggered,this,[this]()
-    {
-        creatingArrow = true;
-        arrowSource = nullptr;
+    undoAction->setShortcut(QKeySequence::Undo);
+    undoAction->setEnabled(false);
 
-        storage.clearSelection();
-        storage.notifyObservers();
+    connect(
+        undoAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            undoLastCommand();
+        }
+    );
 
-        statusBar()->showMessage(
-            "Выберите источник стрелки"
-        );
+    connect(
+        arrowAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            creatingArrow = true;
+            arrowSource = nullptr;
 
-        update();
-    }
-);
-    connect(saveAction, &QAction::triggered, this, [this]()
-{
-    saveProject();
-});
+            storage.clearSelection();
+            storage.notifyObservers();
 
-    connect(loadAction, &QAction::triggered, this, [this]()
-    {
-        loadProject();
-    });
+            statusBar()->showMessage(
+                "Выберите источник стрелки"
+            );
 
-    connect(groupAction, &QAction::triggered, this, [this](){
-    groupSelected();
-    });
+            update();
+        }
+    );
 
-    connect(triangleAction, &QAction::triggered, this, [this]() {
-        currentShapeType = ShapeType::Triangle;
-    });
+    connect(
+        saveAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            saveProject();
+        }
+    );
 
-    connect(squareAction, &QAction::triggered, this, [this]()
-    {
-        currentShapeType = ShapeType::Square;
-    });
-    connect(colorAction, &QAction::triggered, this, [this]()
-    {
-        changeSelectedColor();
-    });
-    connect(circleAction, &QAction::triggered, this, [this]()
-{
-    currentShapeType = ShapeType::Circle;
-});
-    connect(rectangleAction, &QAction::triggered, this, [this]() {
-        currentShapeType = ShapeType::Rectangle;
-    });
-    connect(ellipseAction, &QAction::triggered, this, [this]()
-{
-    currentShapeType = ShapeType::Ellipse;
-});
+    connect(
+        loadAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            loadProject();
+        }
+    );
 
-    connect(lineAction, &QAction::triggered, this, [this]()
-    {
-        currentShapeType = ShapeType::Line;
-    });
+    connect(
+        groupAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            groupSelected();
+        }
+    );
+
+    connect(
+        triangleAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            currentShapeType = ShapeType::Triangle;
+        }
+    );
+
+    connect(
+        squareAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            currentShapeType = ShapeType::Square;
+        }
+    );
+
+    connect(
+        colorAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            changeSelectedColor();
+        }
+    );
+
+    connect(
+        circleAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            currentShapeType = ShapeType::Circle;
+        }
+    );
+
+    connect(
+        rectangleAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            currentShapeType = ShapeType::Rectangle;
+        }
+    );
+
+    connect(
+        ellipseAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            currentShapeType = ShapeType::Ellipse;
+        }
+    );
+
+    connect(
+        lineAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            currentShapeType = ShapeType::Line;
+        }
+    );
+
     QMenu* fileMenu = menuBar()->addMenu("Файл");
 
     fileMenu->addAction(saveAction);
     fileMenu->addAction(loadAction);
+
     QMenu *shapeMenu = menuBar()->addMenu("Фигура");
+
     shapeMenu->addAction(circleAction);
     shapeMenu->addAction(rectangleAction);
     shapeMenu->addAction(squareAction);
@@ -149,29 +308,35 @@ void MainWindow::setupActions()
     shapeMenu->addAction(ellipseAction);
     shapeMenu->addAction(lineAction);
 
-
     QMenu *editMenu = menuBar()->addMenu("Редактирование");
+
+    editMenu->addAction(undoAction);
+    editMenu->addSeparator();
     editMenu->addAction(colorAction);
     editMenu->addAction(groupAction);
     editMenu->addAction(arrowAction);
+
     QToolBar *toolBar = addToolBar("Фигуры");
+
     toolBar->addAction(circleAction);
     toolBar->addAction(rectangleAction);
     toolBar->addAction(squareAction);
     toolBar->addAction(triangleAction);
+
     groupAction->setShortcut(QKeySequence("Ctrl+G"));
+
     toolBar->addAction(ellipseAction);
     toolBar->addAction(lineAction);
     toolBar->addAction(arrowAction);
-
-
     toolBar->addAction(colorAction);
+
     circleAction->setCheckable(true);
     rectangleAction->setCheckable(true);
     squareAction->setCheckable(true);
     triangleAction->setCheckable(true);
     ellipseAction->setCheckable(true);
     lineAction->setCheckable(true);
+
     QActionGroup *shapeGroup = new QActionGroup(this);
 
     shapeGroup->addAction(circleAction);
@@ -181,39 +346,51 @@ void MainWindow::setupActions()
     shapeGroup->addAction(ellipseAction);
     shapeGroup->addAction(lineAction);
 
-
     shapeGroup->setExclusive(true);
 
     circleAction->setChecked(true);
 
     ungroupAction = new QAction("Разгруппировать", this);
 
-    connect(ungroupAction, &QAction::triggered, this, [this]()
-    {
-        ungroupSelected();
-    });
+    connect(
+        ungroupAction,
+        &QAction::triggered,
+        this,
+        [this]()
+        {
+            ungroupSelected();
+        }
+    );
 
-    ungroupAction->setShortcut(QKeySequence("Ctrl+Shift+G"));
+    ungroupAction->setShortcut(
+        QKeySequence("Ctrl+Shift+G")
+    );
+
     saveAction->setShortcut(QKeySequence::Save);
     loadAction->setShortcut(QKeySequence::Open);
 
     editMenu->addAction(ungroupAction);
 }
 
-
 void MainWindow::ungroupSelected()
 {
+    QString beforeState =
+        storage.createSnapshot();
 
-    std::vector<Shape*> selectedShapes = storage.takeSelected();
+    std::vector<Shape*> selectedShapes =
+        storage.takeSelected();
 
     for (Shape* shape : selectedShapes)
     {
-        Group* group = dynamic_cast<Group*>(shape);
+        Group* group =
+            dynamic_cast<Group*>(shape);
 
         if (group != nullptr)
         {
             storage.removeArrowsDirectlyReferencing(group);
-            std::vector<Shape*> children = group->takeChildren();
+
+            std::vector<Shape*> children =
+                group->takeChildren();
 
             for (Shape* child : children)
             {
@@ -229,8 +406,11 @@ void MainWindow::ungroupSelected()
         }
     }
 
+    recordCommand(beforeState);
+
     update();
 }
+
 void MainWindow::groupSelected()
 {
     int selectedCount = 0;
@@ -248,7 +428,11 @@ void MainWindow::groupSelected()
         return;
     }
 
-    std::vector<Shape*> selectedShapes = storage.takeSelected();
+    QString beforeState =
+        storage.createSnapshot();
+
+    std::vector<Shape*> selectedShapes =
+        storage.takeSelected();
 
     Group* group = new Group();
 
@@ -260,14 +444,18 @@ void MainWindow::groupSelected()
     group->setSelected(true);
     storage.add(group);
 
+    recordCommand(beforeState);
+
     update();
 }
+
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() != Qt::LeftButton)
         return;
 
     QPoint point = event->pos();
+
     if (creatingArrow)
     {
         Shape* clickedShape =
@@ -292,6 +480,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             );
 
             update();
+
             return;
         }
 
@@ -303,6 +492,9 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
 
             return;
         }
+
+        QString beforeState =
+            storage.createSnapshot();
 
         storage.addArrow(
             new Arrow(
@@ -319,13 +511,18 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
 
         statusBar()->clearMessage();
 
+        recordCommand(beforeState);
+
         update();
+
         return;
     }
+
     bool ctrlPressed =
         event->modifiers() & Qt::ControlModifier;
 
     bool shapeFound = false;
+
     for (int i = storage.getCount() - 1; i >= 0; --i)
     {
         Shape *shape = storage.getObject(i);
@@ -343,23 +540,33 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
                 storage.clearSelection();
                 shape->setSelected(true);
             }
+
             dragging = shape->isSelected();
 
             if (dragging)
             {
                 lastMousePosition = point;
+
+                dragStartSnapshot =
+                    storage.createSnapshot();
             }
+
             storage.notifyObservers();
+
             break;
         }
-
     }
+
     if (!shapeFound)
     {
+        QString beforeState =
+            storage.createSnapshot();
+
         if (!ctrlPressed)
         {
             storage.clearSelection();
         }
+
         Shape *newShape = nullptr;
 
         if (currentShapeType == ShapeType::Circle)
@@ -387,7 +594,8 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             newShape = new CLine(point.x(), point.y());
         }
 
-        if (newShape != nullptr) {
+        if (newShape != nullptr)
+        {
             QRect bounds = getWorkAreaRect();
 
             if (newShape->fitsInBounds(bounds))
@@ -404,9 +612,13 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
                 delete newShape;
             }
         }
+
+        recordCommand(beforeState);
     }
+
     update();
 }
+
 void MainWindow::mouseMoveEvent(QMouseEvent* event)
 {
     if (!dragging ||
@@ -415,10 +627,16 @@ void MainWindow::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    QPoint currentPosition = event->position().toPoint();
+    QPoint currentPosition =
+        event->position().toPoint();
 
-    int dx = currentPosition.x() - lastMousePosition.x();
-    int dy = currentPosition.y() - lastMousePosition.y();
+    int dx =
+        currentPosition.x() -
+        lastMousePosition.x();
+
+    int dy =
+        currentPosition.y() -
+        lastMousePosition.y();
 
     if (dx == 0 && dy == 0)
     {
@@ -444,19 +662,32 @@ void MainWindow::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    lastMousePosition = currentPosition;
+    lastMousePosition =
+        currentPosition;
 
     update();
 }
+
 void MainWindow::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton)
     {
+        if (dragging &&
+            !dragStartSnapshot.isEmpty())
+        {
+            recordCommand(
+                dragStartSnapshot
+            );
+
+            dragStartSnapshot.clear();
+        }
+
         dragging = false;
     }
 
     QMainWindow::mouseReleaseEvent(event);
 }
+
 void MainWindow::paintEvent(QPaintEvent *event)
 {
     QMainWindow::paintEvent(event);
@@ -467,6 +698,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
     {
         storage.getObject(i)->draw(painter);
     }
+
     for (int i = 0; i < storage.getArrowCount(); ++i)
     {
         storage.getArrow(i)->draw(painter);
@@ -477,10 +709,18 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Delete)
     {
-        storage.removeSelected();
+        executeUndoable(
+            [this]()
+            {
+                storage.removeSelected();
+            }
+        );
+
         update();
+
         return;
     }
+
     if (event->key() == Qt::Key_1)
     {
         currentShapeType = ShapeType::Circle;
@@ -494,19 +734,21 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         rectangleAction->setChecked(true);
         return;
     }
+
     if (event->key() == Qt::Key_3)
     {
-
         currentShapeType = ShapeType::Square;
         squareAction->setChecked(true);
         return;
     }
+
     if (event->key() == Qt::Key_4)
     {
         currentShapeType = ShapeType::Triangle;
         triangleAction->setChecked(true);
         return;
     }
+
     if (event->key() == Qt::Key_5)
     {
         currentShapeType = ShapeType::Ellipse;
@@ -520,7 +762,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         lineAction->setChecked(true);
         return;
     }
-
 
     int dx = 0;
     int dy = 0;
@@ -541,28 +782,48 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     {
         dy = 5;
     }
+
     if (dx != 0 || dy != 0)
     {
-        QRect bounds = getWorkAreaRect();
-
-        for (int i = 0; i < storage.getCount(); i++)
-        {
-            Shape *shape = storage.getObject(i);
-
-            if (shape->isSelected())
+        executeUndoable(
+            [this, dx, dy]()
             {
-                shape->move(dx, dy, bounds);
+                QRect bounds =
+                    getWorkAreaRect();
+
+                MoveContext context;
+
+                for (int i = 0;
+                     i < storage.getCount();
+                     ++i)
+                {
+                    Shape *shape =
+                        storage.getObject(i);
+
+                    if (shape->isSelected())
+                    {
+                        shape->moveWithContext(
+                            dx,
+                            dy,
+                            bounds,
+                            context
+                        );
+                    }
+                }
             }
-        }
+        );
 
         update();
+
         return;
     }
+
     if (event->key() == Qt::Key_C)
     {
         changeSelectedColor();
         return;
     }
+
     int resizeDelta = 0;
 
     if (event->key() == Qt::Key_Plus)
@@ -573,40 +834,57 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     {
         resizeDelta = -5;
     }
+
     if (resizeDelta != 0)
     {
-        QRect bounds = getWorkAreaRect();
-
-        for (int i = 0; i < storage.getCount(); i++)
-        {
-            Shape *shape = storage.getObject(i);
-
-            if (shape->isSelected())
+        executeUndoable(
+            [this, resizeDelta]()
             {
-                shape->resize(resizeDelta, bounds);
+                QRect bounds =
+                    getWorkAreaRect();
+
+                for (int i = 0;
+                     i < storage.getCount();
+                     ++i)
+                {
+                    Shape *shape =
+                        storage.getObject(i);
+
+                    if (shape->isSelected())
+                    {
+                        shape->resize(
+                            resizeDelta,
+                            bounds
+                        );
+                    }
+                }
             }
-        }
+        );
 
         update();
+
         return;
     }
+
     QMainWindow::keyPressEvent(event);
 }
+
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
 
-    
     update();
 }
+
 void MainWindow::saveProject()
 {
-    QString fileName = QFileDialog::getSaveFileName(
-        this,
-        "Сохранить проект",
-        QString(),
-        "Текстовые файлы (*.txt)"
-    );
+    QString fileName =
+        QFileDialog::getSaveFileName(
+            this,
+            "Сохранить проект",
+            QString(),
+            "Текстовые файлы (*.txt)"
+        );
 
     if (fileName.isEmpty())
     {
@@ -627,19 +905,24 @@ void MainWindow::saveProject()
         );
     }
 }
+
 void MainWindow::loadProject()
 {
-    QString fileName = QFileDialog::getOpenFileName(
-        this,
-        "Загрузить проект",
-        QString(),
-        "Текстовые файлы (*.txt)"
-    );
+    QString fileName =
+        QFileDialog::getOpenFileName(
+            this,
+            "Загрузить проект",
+            QString(),
+            "Текстовые файлы (*.txt)"
+        );
 
     if (fileName.isEmpty())
     {
         return;
     }
+
+    QString beforeState =
+        storage.createSnapshot();
 
     DefaultShapeFactory factory;
 
@@ -658,8 +941,11 @@ void MainWindow::loadProject()
         return;
     }
 
+    recordCommand(beforeState);
+
     update();
 }
+
 Shape* MainWindow::findShapeAt(
     const QPoint& point
 ) const
@@ -668,7 +954,8 @@ Shape* MainWindow::findShapeAt(
          i >= 0;
          --i)
     {
-        Shape* shape = storage.getObject(i);
+        Shape* shape =
+            storage.getObject(i);
 
         if (shape->contains(
                 point.x(),

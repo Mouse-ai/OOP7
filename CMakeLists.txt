@@ -54,6 +54,11 @@ add_executable(OOP7
         ShapeMoveObserver.h
         Arrow.cpp
         Arrow.h
+        Command.h
+        SnapshotCommand.cpp
+        SnapshotCommand.h
+        CommandHistory.cpp
+        CommandHistory.h
 )
 target_link_libraries(OOP7
         Qt::Core

@@ -11,6 +11,10 @@
 #include "ShapeStorage.h"
 #include <QRect>
 #include <QResizeEvent>
+#include "CommandHistory.h"
+#include "ShapeFactory.h"
+
+#include <functional>
 class ShapeTreeWidget;
 class MainWindow : public QMainWindow
 {
@@ -65,6 +69,22 @@ private:
     bool creatingArrow = false;
     Shape* arrowSource = nullptr;
     Shape* findShapeAt(const QPoint& point) const;
+    CommandHistory commandHistory;
+    DefaultShapeFactory undoFactory;
+
+    QAction* undoAction;
+
+    QString dragStartSnapshot;
+
+    void executeUndoable(
+        const std::function<void()>& action
+    );
+
+    void recordCommand(
+        const QString& beforeState
+    );
+
+    void undoLastCommand();
 };
 
 #endif
