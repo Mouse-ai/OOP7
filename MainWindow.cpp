@@ -15,6 +15,7 @@
 #include "ShapeFactory.h"
 #include "Arrow.h"
 #include <QStatusBar>
+#include "ActionCommand.h"
 #include "SnapshotCommand.h"
 #include <memory>
 
@@ -57,12 +58,18 @@ void MainWindow::executeUndoable(
     const std::function<void()>& action
 )
 {
-    QString beforeState =
-        storage.createSnapshot();
+    commandHistory.execute(
+        std::make_unique<ActionCommand>(
+            storage,
+            undoFactory,
+            getWorkAreaRect(),
+            action
+        )
+    );
 
-    action();
-
-    recordCommand(beforeState);
+    undoAction->setEnabled(
+        !commandHistory.empty()
+    );
 }
 
 void MainWindow::recordCommand(
@@ -79,7 +86,7 @@ void MainWindow::recordCommand(
         return;
     }
 
-    commandHistory.push(
+    commandHistory.execute(
         std::make_unique<SnapshotCommand>(
             storage,
             undoFactory,
@@ -89,7 +96,9 @@ void MainWindow::recordCommand(
         )
     );
 
-    undoAction->setEnabled(true);
+    undoAction->setEnabled(
+        !commandHistory.empty()
+    );
 }
 
 void MainWindow::undoLastCommand()
@@ -123,7 +132,7 @@ void MainWindow::changeSelectedColor()
     executeUndoable(
         [this, newColor]()
         {
-            for (int i = 0; i < storage.getCount(); i++)
+            for (int i = 0; i < storage.getCount(); ++i)
             {
                 Shape *shape = storage.getObject(i);
 
@@ -374,39 +383,39 @@ void MainWindow::setupActions()
 
 void MainWindow::ungroupSelected()
 {
-    QString beforeState =
-        storage.createSnapshot();
-
-    std::vector<Shape*> selectedShapes =
-        storage.takeSelected();
-
-    for (Shape* shape : selectedShapes)
-    {
-        Group* group =
-            dynamic_cast<Group*>(shape);
-
-        if (group != nullptr)
+    executeUndoable(
+        [this]()
         {
-            storage.removeArrowsDirectlyReferencing(group);
+            std::vector<Shape*> selectedShapes =
+                storage.takeSelected();
 
-            std::vector<Shape*> children =
-                group->takeChildren();
-
-            for (Shape* child : children)
+            for (Shape* shape : selectedShapes)
             {
-                child->setSelected(true);
-                storage.add(child);
+                Group* group =
+                    dynamic_cast<Group*>(shape);
+
+                if (group != nullptr)
+                {
+                    storage.removeArrowsDirectlyReferencing(group);
+
+                    std::vector<Shape*> children =
+                        group->takeChildren();
+
+                    for (Shape* child : children)
+                    {
+                        child->setSelected(true);
+                        storage.add(child);
+                    }
+
+                    delete group;
+                }
+                else
+                {
+                    storage.add(shape);
+                }
             }
-
-            delete group;
         }
-        else
-        {
-            storage.add(shape);
-        }
-    }
-
-    recordCommand(beforeState);
+    );
 
     update();
 }
@@ -428,23 +437,23 @@ void MainWindow::groupSelected()
         return;
     }
 
-    QString beforeState =
-        storage.createSnapshot();
+    executeUndoable(
+        [this]()
+        {
+            std::vector<Shape*> selectedShapes =
+                storage.takeSelected();
 
-    std::vector<Shape*> selectedShapes =
-        storage.takeSelected();
+            Group* group = new Group();
 
-    Group* group = new Group();
+            for (Shape* shape : selectedShapes)
+            {
+                group->add(shape);
+            }
 
-    for (Shape* shape : selectedShapes)
-    {
-        group->add(shape);
-    }
-
-    group->setSelected(true);
-    storage.add(group);
-
-    recordCommand(beforeState);
+            group->setSelected(true);
+            storage.add(group);
+        }
+    );
 
     update();
 }
@@ -452,7 +461,9 @@ void MainWindow::groupSelected()
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() != Qt::LeftButton)
+    {
         return;
+    }
 
     QPoint point = event->pos();
 
@@ -472,7 +483,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
 
             storage.clearSelection();
             arrowSource->setSelected(true);
-
             storage.notifyObservers();
 
             statusBar()->showMessage(
@@ -480,7 +490,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             );
 
             update();
-
             return;
         }
 
@@ -493,28 +502,29 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             return;
         }
 
-        QString beforeState =
-            storage.createSnapshot();
+        Shape* source = arrowSource;
 
-        storage.addArrow(
-            new Arrow(
-                arrowSource,
-                clickedShape
-            )
+        executeUndoable(
+            [this, source, clickedShape]()
+            {
+                storage.addArrow(
+                    new Arrow(
+                        source,
+                        clickedShape
+                    )
+                );
+
+                storage.clearSelection();
+                storage.notifyObservers();
+            }
         );
 
         creatingArrow = false;
         arrowSource = nullptr;
 
-        storage.clearSelection();
-        storage.notifyObservers();
-
         statusBar()->clearMessage();
 
-        recordCommand(beforeState);
-
         update();
-
         return;
     }
 
@@ -546,60 +556,63 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             if (dragging)
             {
                 lastMousePosition = point;
-
                 dragStartSnapshot =
                     storage.createSnapshot();
             }
 
             storage.notifyObservers();
-
             break;
         }
     }
 
     if (!shapeFound)
     {
-        QString beforeState =
-            storage.createSnapshot();
-
-        if (!ctrlPressed)
-        {
-            storage.clearSelection();
-        }
-
-        Shape *newShape = nullptr;
-
-        if (currentShapeType == ShapeType::Circle)
-        {
-            newShape = new CCircle(point.x(), point.y());
-        }
-        else if (currentShapeType == ShapeType::Rectangle)
-        {
-            newShape = new CRectangle(point.x(), point.y());
-        }
-        else if (currentShapeType == ShapeType::Square)
-        {
-            newShape = new CSquare(point.x(), point.y());
-        }
-        else if (currentShapeType == ShapeType::Triangle)
-        {
-            newShape = new CTriangle(point.x(), point.y());
-        }
-        else if (currentShapeType == ShapeType::Ellipse)
-        {
-            newShape = new CEllipse(point.x(), point.y());
-        }
-        else if (currentShapeType == ShapeType::Line)
-        {
-            newShape = new CLine(point.x(), point.y());
-        }
-
-        if (newShape != nullptr)
-        {
-            QRect bounds = getWorkAreaRect();
-
-            if (newShape->fitsInBounds(bounds))
+        executeUndoable(
+            [this, point, ctrlPressed]()
             {
+                if (!ctrlPressed)
+                {
+                    storage.clearSelection();
+                }
+
+                Shape *newShape = nullptr;
+
+                if (currentShapeType == ShapeType::Circle)
+                {
+                    newShape = new CCircle(point.x(), point.y());
+                }
+                else if (currentShapeType == ShapeType::Rectangle)
+                {
+                    newShape = new CRectangle(point.x(), point.y());
+                }
+                else if (currentShapeType == ShapeType::Square)
+                {
+                    newShape = new CSquare(point.x(), point.y());
+                }
+                else if (currentShapeType == ShapeType::Triangle)
+                {
+                    newShape = new CTriangle(point.x(), point.y());
+                }
+                else if (currentShapeType == ShapeType::Ellipse)
+                {
+                    newShape = new CEllipse(point.x(), point.y());
+                }
+                else if (currentShapeType == ShapeType::Line)
+                {
+                    newShape = new CLine(point.x(), point.y());
+                }
+
+                if (newShape == nullptr)
+                {
+                    return;
+                }
+
+                if (!newShape->fitsInBounds(getWorkAreaRect()))
+                {
+                    delete newShape;
+                    return;
+                }
+
                 if (ctrlPressed)
                 {
                     newShape->setSelected(true);
@@ -607,13 +620,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
 
                 storage.add(newShape);
             }
-            else
-            {
-                delete newShape;
-            }
-        }
-
-        recordCommand(beforeState);
+        );
     }
 
     update();
@@ -717,7 +724,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         );
 
         update();
-
         return;
     }
 
@@ -814,7 +820,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         );
 
         update();
-
         return;
     }
 
@@ -862,7 +867,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         );
 
         update();
-
         return;
     }
 
@@ -872,7 +876,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-
     update();
 }
 
@@ -921,15 +924,20 @@ void MainWindow::loadProject()
         return;
     }
 
-    QString beforeState =
-        storage.createSnapshot();
+    bool loaded = false;
 
-    DefaultShapeFactory factory;
+    executeUndoable(
+        [this, &loaded, fileName]()
+        {
+            loaded = storage.loadFromFile(
+                fileName,
+                undoFactory,
+                getWorkAreaRect()
+            );
+        }
+    );
 
-    if (!storage.loadFromFile(
-            fileName,
-            factory,
-            getWorkAreaRect()))
+    if (!loaded)
     {
         QMessageBox::critical(
             this,
@@ -940,8 +948,6 @@ void MainWindow::loadProject()
 
         return;
     }
-
-    recordCommand(beforeState);
 
     update();
 }
