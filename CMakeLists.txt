@@ -6,7 +6,6 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-
 find_package(Qt6 COMPONENTS
         Core
         Gui
@@ -42,27 +41,36 @@ add_executable(OOP7
 
         CTriangle.cpp
         CTriangle.h
+
         Group.cpp
         Group.h
+
         ShapeFactory.cpp
         ShapeFactory.h
+
         StorageObserver.cpp
         StorageObserver.h
+
         ShapeTreeWidget.cpp
         ShapeTreeWidget.h
+
         ShapeMoveObserver.cpp
         ShapeMoveObserver.h
+
         Arrow.cpp
         Arrow.h
+
         Command.h
+        ActionCommand.cpp
+        ActionCommand.h
         SnapshotCommand.cpp
         SnapshotCommand.h
         CommandHistory.cpp
         CommandHistory.h
 )
+
 target_link_libraries(OOP7
         Qt::Core
         Qt::Gui
         Qt::Widgets
 )
-
