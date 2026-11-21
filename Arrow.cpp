@@ -33,11 +33,6 @@ Shape* Arrow::getTarget() const
     return target;
 }
 
-bool Arrow::references(Shape* shape) const
-{
-    return source == shape ||
-           target == shape;
-}
 void Arrow::onShapeMoved(
     Shape* movedSource,
     int dx,
@@ -53,7 +48,7 @@ void Arrow::onShapeMoved(
     }
 
     Shape* targetOwner =
-    target->getTopLevelOwner();
+        target->getTopLevelOwner();
 
     targetOwner->moveWithContext(
         dx,
@@ -62,6 +57,7 @@ void Arrow::onShapeMoved(
         context
     );
 }
+
 void Arrow::draw(QPainter& painter) const
 {
     if (source == nullptr ||
@@ -69,15 +65,15 @@ void Arrow::draw(QPainter& painter) const
     {
         return;
     }
+
     const Shape* visibleSource =
-    source->getTopLevelOwner();
+        source->getTopLevelOwner();
 
     const Shape* visibleTarget =
         target->getTopLevelOwner();
 
-
     QPointF start =
-    visibleSource->boundingRect().center();
+        visibleSource->boundingRect().center();
 
     QPointF end =
         visibleTarget->boundingRect().center();
