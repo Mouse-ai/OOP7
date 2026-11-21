@@ -5,9 +5,20 @@
 #include <QPainter>
 #include <QRect>
 #include <QTextStream>
+#include <vector>
+#include <unordered_set>
+#include "ShapeMoveObserver.h"
 class ShapeFactory;
+class Shape;
+
+struct MoveContext
+{
+    std::unordered_set<Shape*> visited;
+};
 class Shape
 {
+private:
+    std::vector<ShapeMoveObserver*> movementObservers;
 protected:
     int x;
     int y;
@@ -15,6 +26,12 @@ protected:
     bool selected;
     virtual bool canResize(int delta) const = 0;
     virtual void changeSize(int delta) = 0;
+    void notifyMoveObservers(
+    int dx,
+    int dy,
+    const QRect& bounds,
+    MoveContext& context
+);
 
 
 public:
@@ -40,6 +57,15 @@ public:
        const ShapeFactory& factory
    ) = 0;
     virtual QString typeName() const = 0;
+    void subscribeToMovement(ShapeMoveObserver* observer);
+    void unsubscribeFromMovement(ShapeMoveObserver* observer);
+
+    virtual bool moveWithContext(
+        int dx,
+        int dy,
+        const QRect& bounds,
+        MoveContext& context
+    );
 };
 
 #endif

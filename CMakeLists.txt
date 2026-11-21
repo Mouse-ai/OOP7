@@ -50,6 +50,8 @@ add_executable(OOP7
         StorageObserver.h
         ShapeTreeWidget.cpp
         ShapeTreeWidget.h
+        ShapeMoveObserver.cpp
+        ShapeMoveObserver.h
 )
 target_link_libraries(OOP7
         Qt::Core

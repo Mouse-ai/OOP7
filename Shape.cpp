@@ -3,6 +3,7 @@
 //
 
 #include "Shape.h"
+#include <algorithm>
 Shape::Shape(int x, int y): x(x), y(y), color(Qt::black), selected(false){}
 bool Shape::isSelected() const {
     return selected;
@@ -16,16 +17,20 @@ void Shape:: toggleSelected() {
 void Shape::setColor(const QColor &newColor) {
     color = newColor;
 }
-void Shape::move(int dx, int dy, const QRect &bounds)
+void Shape::move(
+    int dx,
+    int dy,
+    const QRect& bounds
+)
 {
-    x += dx;
-    y += dy;
+    MoveContext context;
 
-    if (!fitsInBounds(bounds))
-    {
-        x -= dx;
-        y -= dy;
-    }
+    moveWithContext(
+        dx,
+        dy,
+        bounds,
+        context
+    );
 }
 bool Shape::resize(int delta, const QRect &bounds)
 {
@@ -47,4 +52,83 @@ bool Shape::resize(int delta, const QRect &bounds)
 bool Shape::fitsInBounds(const QRect &bounds) const
 {
     return bounds.contains(boundingRect());
+}
+void Shape::subscribeToMovement(ShapeMoveObserver* observer)
+{
+    if (observer == nullptr)
+    {
+        return;
+    }
+
+    if (std::find(
+            movementObservers.begin(),
+            movementObservers.end(),
+            observer
+        ) == movementObservers.end())
+    {
+        movementObservers.push_back(observer);
+    }
+}
+void Shape::unsubscribeFromMovement(ShapeMoveObserver* observer)
+{
+    movementObservers.erase(
+        std::remove(
+            movementObservers.begin(),
+            movementObservers.end(),
+            observer
+        ),
+        movementObservers.end()
+    );
+}
+void Shape::notifyMoveObservers(
+    int dx,
+    int dy,
+    const QRect& bounds,
+    MoveContext& context
+)
+{
+    for (ShapeMoveObserver* observer : movementObservers)
+    {
+        observer->onShapeMoved(
+            this,
+            dx,
+            dy,
+            bounds,
+            context
+        );
+    }
+}
+bool Shape::moveWithContext(
+    int dx,
+    int dy,
+    const QRect& bounds,
+    MoveContext& context
+)
+{
+    if (context.visited.contains(this))
+    {
+        return false;
+    }
+
+    context.visited.insert(this);
+
+    x += dx;
+    y += dy;
+
+    if (!fitsInBounds(bounds))
+    {
+        x -= dx;
+        y -= dy;
+
+        return false;
+    }
+
+    notifyMoveObservers(
+        dx,
+        dy,
+        bounds,
+        context
+    );
+
+    return true;
 }

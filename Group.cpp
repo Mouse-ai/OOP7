@@ -62,20 +62,46 @@ void Group::draw(QPainter& painter) const
 bool Group::contains(int pointX, int pointY) const
 {
     return boundingRect().contains(pointX, pointY);
-}
-void Group::move(int dx, int dy, const QRect& bounds)
+}bool Group::moveWithContext(
+    int dx,
+    int dy,
+    const QRect& bounds,
+    MoveContext& context
+)
 {
-    QRect newRect = boundingRect().translated(dx, dy);
+    if (context.visited.contains(this))
+    {
+        return false;
+    }
+
+    QRect newRect =
+        boundingRect().translated(dx, dy);
 
     if (!bounds.contains(newRect))
     {
-        return;
+        return false;
     }
+
+    context.visited.insert(this);
 
     for (Shape* shape : children)
     {
-        shape->move(dx, dy, bounds);
+        shape->moveWithContext(
+            dx,
+            dy,
+            bounds,
+            context
+        );
     }
+
+    notifyMoveObservers(
+        dx,
+        dy,
+        bounds,
+        context
+    );
+
+    return true;
 }
 bool Group::canResize(int delta) const
 {
@@ -216,3 +242,4 @@ const std::vector<Shape*>& Group::getChildren() const
 {
     return children;
 }
+;
