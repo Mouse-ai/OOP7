@@ -23,6 +23,7 @@ void Group::add(Shape* shape)
         children.push_back(shape);
     }
 }
+
 QRect Group::boundingRect() const
 {
     if (children.empty())
@@ -34,11 +35,14 @@ QRect Group::boundingRect() const
 
     for (int i = 1; i < children.size(); ++i)
     {
-        result = result.united(children[i]->boundingRect());
+        result = result.united(
+            children[i]->boundingRect()
+        );
     }
 
     return result;
 }
+
 void Group::draw(QPainter& painter) const
 {
     for (Shape* shape : children)
@@ -60,10 +64,19 @@ void Group::draw(QPainter& painter) const
         painter.restore();
     }
 }
-bool Group::contains(int pointX, int pointY) const
+
+bool Group::contains(
+    int pointX,
+    int pointY
+) const
 {
-    return boundingRect().contains(pointX, pointY);
-}bool Group::moveWithContext(
+    return boundingRect().contains(
+        pointX,
+        pointY
+    );
+}
+
+bool Group::moveWithContext(
     int dx,
     int dy,
     const QRect& bounds,
@@ -104,6 +117,7 @@ bool Group::contains(int pointX, int pointY) const
 
     return true;
 }
+
 bool Group::canResize(int delta) const
 {
     return false;
@@ -112,6 +126,7 @@ bool Group::canResize(int delta) const
 void Group::changeSize(int delta)
 {
 }
+
 std::vector<Shape*> Group::takeChildren()
 {
     std::vector<Shape*> result = children;
@@ -125,7 +140,11 @@ std::vector<Shape*> Group::takeChildren()
 
     return result;
 }
-void Group::save(QTextStream& out, int indent) const
+
+void Group::save(
+    QTextStream& out,
+    int indent
+) const
 {
     QString spaces(indent, ' ');
 
@@ -136,9 +155,13 @@ void Group::save(QTextStream& out, int indent) const
 
     for (Shape* shape : children)
     {
-        shape->save(out, indent + 2);
+        shape->save(
+            out,
+            indent + 2
+        );
     }
 }
+
 bool Group::load(
     QTextStream& in,
     const ShapeFactory& factory
@@ -172,7 +195,8 @@ bool Group::load(
             return false;
         }
 
-        Shape* child = factory.create(type);
+        Shape* child =
+            factory.create(type);
 
         if (child == nullptr)
         {
@@ -215,7 +239,10 @@ bool Group::load(
 
     return true;
 }
-void Group::setColor(const QColor& newColor)
+
+void Group::setColor(
+    const QColor& newColor
+)
 {
     Shape::setColor(newColor);
 
@@ -224,7 +251,11 @@ void Group::setColor(const QColor& newColor)
         shape->setColor(newColor);
     }
 }
-bool Group::resize(int delta, const QRect& bounds)
+
+bool Group::resize(
+    int delta,
+    const QRect& bounds
+)
 {
     std::vector<Shape*> resizedShapes;
 
@@ -234,7 +265,10 @@ bool Group::resize(int delta, const QRect& bounds)
         {
             for (Shape* resizedShape : resizedShapes)
             {
-                resizedShape->resize(-delta, bounds);
+                resizedShape->resize(
+                    -delta,
+                    bounds
+                );
             }
 
             return false;
@@ -245,8 +279,8 @@ bool Group::resize(int delta, const QRect& bounds)
 
     return true;
 }
+
 const std::vector<Shape*>& Group::getChildren() const
 {
     return children;
 }
-;
