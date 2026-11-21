@@ -46,6 +46,10 @@ add_executable(OOP7
         Group.h
         ShapeFactory.cpp
         ShapeFactory.h
+        StorageObserver.cpp
+        StorageObserver.h
+        ShapeTreeWidget.cpp
+        ShapeTreeWidget.h
 )
 target_link_libraries(OOP7
         Qt::Core

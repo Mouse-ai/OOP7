@@ -5,11 +5,13 @@
 #include "ShapeStorage.h"
 #include <QFile>
 #include <QTextStream>
-
+#include "ShapeFactory.h"
 #include "ShapeStorage.h"
+#include <algorithm>
 
 void ShapeStorage::add(Shape *shape) {
     shapes.push_back(shape);
+    notifyObservers();
 }
 int ShapeStorage::getCount() const {
     return static_cast<int>(shapes.size());
@@ -38,6 +40,7 @@ void ShapeStorage::removeSelected() {
             i++;
         }
     }
+    notifyObservers();
 }
 std::vector<Shape*> ShapeStorage::takeSelected()
 {
@@ -170,6 +173,35 @@ bool ShapeStorage::loadFromFile(
     shapes.clear();
 
     shapes.swap(loadedShapes);
-
+    notifyObservers();
     return true;
+}
+void ShapeStorage::subscribe(StorageObserver* observer)
+{
+    if (observer == nullptr)
+    {
+        return;
+    }
+
+    observers.push_back(observer);
+}
+
+void ShapeStorage::unsubscribe(StorageObserver* observer)
+{
+    observers.erase(
+        std::remove(
+            observers.begin(),
+            observers.end(),
+            observer
+        ),
+        observers.end()
+    );
+}
+
+void ShapeStorage::notifyObservers()
+{
+    for (StorageObserver* observer : observers)
+    {
+        observer->onStorageChanged();
+    }
 }

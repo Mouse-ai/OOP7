@@ -11,6 +11,7 @@
 #include "ShapeStorage.h"
 #include <QRect>
 #include <QResizeEvent>
+class ShapeTreeWidget;
 class MainWindow : public QMainWindow
 {
 public:
@@ -57,7 +58,7 @@ private:
     void groupSelected();
     ShapeStorage storage;
     ShapeType currentShapeType = ShapeType::Circle;
-
+    ShapeTreeWidget* shapeTree;
 };
 
 #endif

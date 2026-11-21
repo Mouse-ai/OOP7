@@ -10,7 +10,8 @@
 #include "Group.h"
 #include <QFileDialog>
 #include <QMessageBox>
-
+#include <QDockWidget>
+#include "ShapeTreeWidget.h"
 #include "ShapeFactory.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -22,6 +23,18 @@ MainWindow::MainWindow(QWidget *parent)
     workArea->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     setCentralWidget(workArea);
+    QDockWidget* treeDock =
+    new QDockWidget("Дерево объектов", this);
+
+    shapeTree =
+        new ShapeTreeWidget(&storage, treeDock);
+
+    treeDock->setWidget(shapeTree);
+
+    addDockWidget(
+        Qt::RightDockWidgetArea,
+        treeDock
+    );
 }
 void MainWindow::changeSelectedColor()
 {

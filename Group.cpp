@@ -212,3 +212,7 @@ bool Group::resize(int delta, const QRect& bounds)
 
     return true;
 }
+const std::vector<Shape*>& Group::getChildren() const
+{
+    return children;
+}

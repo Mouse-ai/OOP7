@@ -23,6 +23,10 @@ public:
     void draw(QPainter &painter) const override;
     QRect boundingRect() const override;
     bool load(QTextStream& in,const ShapeFactory& factory) override;
+    QString typeName() const override
+    {
+        return "Line";
+    }
 };
 
 #endif

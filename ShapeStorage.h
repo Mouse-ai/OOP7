@@ -6,10 +6,11 @@
 #define OOP4_SHAPESTORAGE_H
 #include <vector>
 #include "Shape.h"
-
+#include "StorageObserver.h"
 class ShapeStorage {
 private:
     std::vector<Shape *> shapes;
+    std::vector<StorageObserver*> observers;
 
 public:
     void add(Shape *shape);
@@ -27,6 +28,9 @@ public:
         const QRect& bounds
     );
     ~ShapeStorage();
+    void subscribe(StorageObserver* observer);
+    void unsubscribe(StorageObserver* observer);
+    void notifyObservers();
 };
 
 

@@ -24,13 +24,17 @@ public:
     void draw(QPainter& painter) const override;
     bool contains(int pointX, int pointY) const override;
     QRect boundingRect() const override;
-
+    const std::vector<Shape*>& getChildren() const;
     void move(int dx, int dy, const QRect& bounds) override;
     std::vector<Shape*> takeChildren();
     void save(QTextStream& out, int indent = 0) const override;
     bool load(QTextStream& in,const ShapeFactory& factory) override;
     void setColor(const QColor& newColor) override;
     bool resize(int delta, const QRect& bounds) override;
+    QString typeName() const override
+    {
+        return "Group";
+    }
 };
 
 #endif

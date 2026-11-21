@@ -11,6 +11,10 @@ public:
 
     void save(QTextStream& out, int indent = 0) const override;
     bool load(QTextStream& in,const ShapeFactory& factory) override;
+    QString typeName() const override
+    {
+        return "Square";
+    }
 };
 
 #endif

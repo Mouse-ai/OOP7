@@ -16,6 +16,7 @@ protected:
     virtual bool canResize(int delta) const = 0;
     virtual void changeSize(int delta) = 0;
 
+
 public:
     Shape(int x, int y);
 
@@ -38,6 +39,7 @@ public:
        QTextStream& in,
        const ShapeFactory& factory
    ) = 0;
+    virtual QString typeName() const = 0;
 };
 
 #endif

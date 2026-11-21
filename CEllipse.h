@@ -12,6 +12,7 @@ protected:
     bool canResize(int delta) const override;
     void changeSize(int delta) override;
 
+
 public:
     CEllipse(int x, int y);
     CEllipse(int x, int y, int radiusX, int radiusY);
@@ -22,5 +23,9 @@ public:
 
     void save(QTextStream& out, int indent = 0) const override;
     bool load(QTextStream& in,const ShapeFactory& factory) override;
+    QString typeName() const override
+    {
+        return "Ellipse";
+    }
 };
 #endif
