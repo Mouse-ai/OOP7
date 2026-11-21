@@ -297,3 +297,23 @@ void ShapeStorage::removeArrowsReferencing(Shape* shape)
         }
     }
 }
+void ShapeStorage::removeArrowsDirectlyReferencing(
+    Shape* shape
+)
+{
+    size_t i = 0;
+
+    while (i < arrows.size())
+    {
+        if (arrows[i]->getSource() == shape ||
+            arrows[i]->getTarget() == shape)
+        {
+            delete arrows[i];
+            arrows.erase(arrows.begin() + i);
+        }
+        else
+        {
+            ++i;
+        }
+    }
+}

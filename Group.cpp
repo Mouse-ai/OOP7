@@ -19,6 +19,7 @@ void Group::add(Shape* shape)
     if (shape != nullptr)
     {
         shape->setSelected(false);
+        shape->setParentGroup(this);
         children.push_back(shape);
     }
 }
@@ -114,6 +115,12 @@ void Group::changeSize(int delta)
 std::vector<Shape*> Group::takeChildren()
 {
     std::vector<Shape*> result = children;
+
+    for (Shape* shape : result)
+    {
+        shape->setParentGroup(nullptr);
+    }
+
     children.clear();
 
     return result;

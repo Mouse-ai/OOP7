@@ -4,6 +4,7 @@
 
 #include "Shape.h"
 #include <algorithm>
+#include "Group.h"
 Shape::Shape(int x, int y): x(x), y(y), color(Qt::black), selected(false){}
 bool Shape::isSelected() const {
     return selected;
@@ -131,4 +132,35 @@ bool Shape::moveWithContext(
     );
 
     return true;
+}
+void Shape::setParentGroup(Group* group)
+{
+    parentGroup = group;
+}
+
+Group* Shape::getParentGroup() const
+{
+    return parentGroup;
+}
+const Shape* Shape::getTopLevelOwner() const
+{
+    const Shape* current = this;
+
+    while (current->parentGroup != nullptr)
+    {
+        current = current->parentGroup;
+    }
+
+    return current;
+}
+Shape* Shape::getTopLevelOwner()
+{
+    Shape* current = this;
+
+    while (current->parentGroup != nullptr)
+    {
+        current = current->parentGroup;
+    }
+
+    return current;
 }

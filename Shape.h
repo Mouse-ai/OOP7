@@ -10,7 +10,7 @@
 #include "ShapeMoveObserver.h"
 class ShapeFactory;
 class Shape;
-
+class Group;
 struct MoveContext
 {
     std::unordered_set<Shape*> visited;
@@ -19,6 +19,7 @@ class Shape
 {
 private:
     std::vector<ShapeMoveObserver*> movementObservers;
+    Group* parentGroup = nullptr;
 protected:
     int x;
     int y;
@@ -66,6 +67,11 @@ public:
         const QRect& bounds,
         MoveContext& context
     );
+    void setParentGroup(Group* group);
+    Group* getParentGroup() const;
+
+    Shape* getTopLevelOwner();
+    const Shape* getTopLevelOwner() const;
 };
 
 #endif

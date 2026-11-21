@@ -203,6 +203,7 @@ void MainWindow::setupActions()
 
 void MainWindow::ungroupSelected()
 {
+
     std::vector<Shape*> selectedShapes = storage.takeSelected();
 
     for (Shape* shape : selectedShapes)
@@ -211,6 +212,7 @@ void MainWindow::ungroupSelected()
 
         if (group != nullptr)
         {
+            storage.removeArrowsDirectlyReferencing(group);
             std::vector<Shape*> children = group->takeChildren();
 
             for (Shape* child : children)

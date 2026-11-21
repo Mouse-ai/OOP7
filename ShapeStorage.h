@@ -39,6 +39,7 @@ public:
     int getArrowCount() const;
     Arrow* getArrow(int index) const;
     void removeArrowsReferencing(Shape* shape);
+    void removeArrowsDirectlyReferencing(Shape* shape);
 };
 
 

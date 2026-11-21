@@ -52,7 +52,10 @@ void Arrow::onShapeMoved(
         return;
     }
 
-    target->moveWithContext(
+    Shape* targetOwner =
+    target->getTopLevelOwner();
+
+    targetOwner->moveWithContext(
         dx,
         dy,
         bounds,
@@ -61,6 +64,11 @@ void Arrow::onShapeMoved(
 }
 void Arrow::draw(QPainter& painter) const
 {
+    const Shape* visibleSource =
+    source->getTopLevelOwner();
+
+    const Shape* visibleTarget =
+        target->getTopLevelOwner();
     if (source == nullptr ||
         target == nullptr)
     {
@@ -68,10 +76,10 @@ void Arrow::draw(QPainter& painter) const
     }
 
     QPointF start =
-        source->boundingRect().center();
+    visibleSource->boundingRect().center();
 
     QPointF end =
-        target->boundingRect().center();
+        visibleTarget->boundingRect().center();
 
     double dx = end.x() - start.x();
     double dy = end.y() - start.y();
