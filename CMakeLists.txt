@@ -52,6 +52,8 @@ add_executable(OOP7
         ShapeTreeWidget.h
         ShapeMoveObserver.cpp
         ShapeMoveObserver.h
+        Arrow.cpp
+        Arrow.h
 )
 target_link_libraries(OOP7
         Qt::Core

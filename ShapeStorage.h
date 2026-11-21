@@ -7,11 +7,14 @@
 #include <vector>
 #include "Shape.h"
 #include "StorageObserver.h"
+
+class Arrow;
 class ShapeStorage {
 private:
     std::vector<Shape *> shapes;
     std::vector<StorageObserver*> observers;
-
+    std::vector<Arrow*> arrows;
+    bool containsShape(Shape* root,Shape* searched) const;
 public:
     void add(Shape *shape);
 
@@ -31,6 +34,11 @@ public:
     void subscribe(StorageObserver* observer);
     void unsubscribe(StorageObserver* observer);
     void notifyObservers();
+    void addArrow(Arrow* arrow);
+
+    int getArrowCount() const;
+    Arrow* getArrow(int index) const;
+    void removeArrowsReferencing(Shape* shape);
 };
 
 

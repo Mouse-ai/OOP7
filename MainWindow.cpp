@@ -13,7 +13,8 @@
 #include <QDockWidget>
 #include "ShapeTreeWidget.h"
 #include "ShapeFactory.h"
-
+#include "Arrow.h"
+#include <QStatusBar>
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -77,6 +78,23 @@ void MainWindow::setupActions()
     saveAction = new QAction("Сохранить", this);
     loadAction = new QAction("Загрузить", this);
 
+    arrowAction = new QAction("Стрелка A → B", this);
+
+    connect(arrowAction,&QAction::triggered,this,[this]()
+    {
+        creatingArrow = true;
+        arrowSource = nullptr;
+
+        storage.clearSelection();
+        storage.notifyObservers();
+
+        statusBar()->showMessage(
+            "Выберите источник стрелки"
+        );
+
+        update();
+    }
+);
     connect(saveAction, &QAction::triggered, this, [this]()
 {
     saveProject();
@@ -135,6 +153,7 @@ void MainWindow::setupActions()
     QMenu *editMenu = menuBar()->addMenu("Редактирование");
     editMenu->addAction(colorAction);
     editMenu->addAction(groupAction);
+    editMenu->addAction(arrowAction);
     QToolBar *toolBar = addToolBar("Фигуры");
     toolBar->addAction(circleAction);
     toolBar->addAction(rectangleAction);
@@ -143,6 +162,7 @@ void MainWindow::setupActions()
     groupAction->setShortcut(QKeySequence("Ctrl+G"));
     toolBar->addAction(ellipseAction);
     toolBar->addAction(lineAction);
+    toolBar->addAction(arrowAction);
 
 
     toolBar->addAction(colorAction);
@@ -246,7 +266,60 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         return;
 
     QPoint point = event->pos();
+    if (creatingArrow)
+    {
+        Shape* clickedShape =
+            findShapeAt(point);
 
+        if (clickedShape == nullptr)
+        {
+            return;
+        }
+
+        if (arrowSource == nullptr)
+        {
+            arrowSource = clickedShape;
+
+            storage.clearSelection();
+            arrowSource->setSelected(true);
+
+            storage.notifyObservers();
+
+            statusBar()->showMessage(
+                "Теперь выберите цель стрелки"
+            );
+
+            update();
+            return;
+        }
+
+        if (clickedShape == arrowSource)
+        {
+            statusBar()->showMessage(
+                "Источник и цель должны быть разными"
+            );
+
+            return;
+        }
+
+        storage.addArrow(
+            new Arrow(
+                arrowSource,
+                clickedShape
+            )
+        );
+
+        creatingArrow = false;
+        arrowSource = nullptr;
+
+        storage.clearSelection();
+        storage.notifyObservers();
+
+        statusBar()->clearMessage();
+
+        update();
+        return;
+    }
     bool ctrlPressed =
         event->modifiers() & Qt::ControlModifier;
 
@@ -352,13 +425,20 @@ void MainWindow::mouseMoveEvent(QMouseEvent* event)
 
     QRect bounds = getWorkAreaRect();
 
+    MoveContext context;
+
     for (int i = 0; i < storage.getCount(); ++i)
     {
         Shape* shape = storage.getObject(i);
 
         if (shape->isSelected())
         {
-            shape->move(dx, dy, bounds);
+            shape->moveWithContext(
+                dx,
+                dy,
+                bounds,
+                context
+            );
         }
     }
 
@@ -381,10 +461,13 @@ void MainWindow::paintEvent(QPaintEvent *event)
 
     QPainter painter(this);
 
-    for (int i = 0; i < storage.getCount(); i++)
+    for (int i = 0; i < storage.getCount(); ++i)
     {
-        Shape *shape = storage.getObject(i);
-        shape->draw(painter);
+        storage.getObject(i)->draw(painter);
+    }
+    for (int i = 0; i < storage.getArrowCount(); ++i)
+    {
+        storage.getArrow(i)->draw(painter);
     }
 }
 
@@ -574,4 +657,24 @@ void MainWindow::loadProject()
     }
 
     update();
+}
+Shape* MainWindow::findShapeAt(
+    const QPoint& point
+) const
+{
+    for (int i = storage.getCount() - 1;
+         i >= 0;
+         --i)
+    {
+        Shape* shape = storage.getObject(i);
+
+        if (shape->contains(
+                point.x(),
+                point.y()))
+        {
+            return shape;
+        }
+    }
+
+    return nullptr;
 }

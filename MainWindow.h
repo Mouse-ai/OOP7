@@ -59,6 +59,12 @@ private:
     ShapeStorage storage;
     ShapeType currentShapeType = ShapeType::Circle;
     ShapeTreeWidget* shapeTree;
+
+    QAction* arrowAction;
+
+    bool creatingArrow = false;
+    Shape* arrowSource = nullptr;
+    Shape* findShapeAt(const QPoint& point) const;
 };
 
 #endif

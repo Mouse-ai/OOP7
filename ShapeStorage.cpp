@@ -8,6 +8,8 @@
 #include "ShapeFactory.h"
 #include "ShapeStorage.h"
 #include <algorithm>
+#include "Arrow.h"
+#include "Group.h"
 
 void ShapeStorage::add(Shape *shape) {
     shapes.push_back(shape);
@@ -24,22 +26,38 @@ void ShapeStorage::clearSelection() {
         shape->setSelected(false);
     }
 }
-ShapeStorage::~ShapeStorage() {
-    for (Shape *shape : shapes) {
+ShapeStorage::~ShapeStorage()
+{
+    for (Arrow* arrow : arrows)
+    {
+        delete arrow;
+    }
+
+    for (Shape* shape : shapes)
+    {
         delete shape;
     }
 }
 
-void ShapeStorage::removeSelected() {
+void ShapeStorage::removeSelected()
+{
     size_t i = 0;
-    while (i < shapes.size()) {
-        if (shapes[i]->isSelected()) {
+
+    while (i < shapes.size())
+    {
+        if (shapes[i]->isSelected())
+        {
+            removeArrowsReferencing(shapes[i]);
+
             delete shapes[i];
-            shapes.erase(shapes.begin()+i);
-        }else {
-            i++;
+            shapes.erase(shapes.begin() + i);
+        }
+        else
+        {
+            ++i;
         }
     }
+
     notifyObservers();
 }
 std::vector<Shape*> ShapeStorage::takeSelected()
@@ -203,5 +221,79 @@ void ShapeStorage::notifyObservers()
     for (StorageObserver* observer : observers)
     {
         observer->onStorageChanged();
+    }
+}
+void ShapeStorage::addArrow(Arrow* arrow)
+{
+    if (arrow == nullptr)
+    {
+        return;
+    }
+
+    arrows.push_back(arrow);
+}
+int ShapeStorage::getArrowCount() const
+{
+    return static_cast<int>(arrows.size());
+}
+Arrow* ShapeStorage::getArrow(int index) const
+{
+    return arrows[index];
+}
+bool ShapeStorage::containsShape(
+    Shape* root,
+    Shape* searched
+) const
+{
+    if (root == searched)
+    {
+        return true;
+    }
+
+    Group* group =
+        dynamic_cast<Group*>(root);
+
+    if (group == nullptr)
+    {
+        return false;
+    }
+
+    for (Shape* child : group->getChildren())
+    {
+        if (containsShape(child, searched))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+void ShapeStorage::removeArrowsReferencing(Shape* shape)
+{
+    size_t i = 0;
+
+    while (i < arrows.size())
+    {
+        Shape* source =
+            arrows[i]->getSource();
+
+        Shape* target =
+            arrows[i]->getTarget();
+
+        bool sourceInside =
+            containsShape(shape, source);
+
+        bool targetInside =
+            containsShape(shape, target);
+
+        if (sourceInside || targetInside)
+        {
+            delete arrows[i];
+            arrows.erase(arrows.begin() + i);
+        }
+        else
+        {
+            ++i;
+        }
     }
 }
