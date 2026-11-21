@@ -29,8 +29,8 @@ public:
         const QString& afterState
     );
 
-    void execute() override;
-    void undo() override;
+    bool execute() override;
+    bool undo() override;
 };
 
 #endif
