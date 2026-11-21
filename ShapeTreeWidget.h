@@ -27,10 +27,6 @@ private:
     ShapeStorage* storage;
 
     void rebuildTree();
-
-    void addShapeNode(
-    QTreeWidgetItem* parent,
-    ::Shape* shape);
     std::unordered_map<QTreeWidgetItem*, ::Shape*> itemToOwner;
     std::unordered_map<::Shape*, QTreeWidgetItem*> rootItems;
 

@@ -64,16 +64,17 @@ void Arrow::onShapeMoved(
 }
 void Arrow::draw(QPainter& painter) const
 {
-    const Shape* visibleSource =
-    source->getTopLevelOwner();
-
-    const Shape* visibleTarget =
-        target->getTopLevelOwner();
     if (source == nullptr ||
         target == nullptr)
     {
         return;
     }
+    const Shape* visibleSource =
+    source->getTopLevelOwner();
+
+    const Shape* visibleTarget =
+        target->getTopLevelOwner();
+
 
     QPointF start =
     visibleSource->boundingRect().center();
