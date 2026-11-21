@@ -28,7 +28,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     shapeTree =
         new ShapeTreeWidget(&storage, treeDock);
-
+    connect(shapeTree,&ShapeTreeWidget::shapeSelectionChanged,this,[this](){
+        update();});
     treeDock->setWidget(shapeTree);
 
     addDockWidget(
@@ -56,6 +57,7 @@ void MainWindow::changeSelectedColor()
     }
 
     storage.clearSelection();
+    storage.notifyObservers();
     update();
 }
 QRect MainWindow::getWorkAreaRect() const
@@ -272,7 +274,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             {
                 lastMousePosition = point;
             }
-
+            storage.notifyObservers();
             break;
         }
 

@@ -3,6 +3,7 @@
 #include "ShapeStorage.h"
 #include "Shape.h"
 #include "Group.h"
+#include <QSignalBlocker>
 
 ShapeTreeWidget::ShapeTreeWidget(
     ShapeStorage* storage,
@@ -12,7 +13,14 @@ ShapeTreeWidget::ShapeTreeWidget(
       storage(storage)
 {
     setHeaderLabel("Объекты");
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
 
+    connect(
+        this,
+        &QTreeWidget::itemSelectionChanged,
+        this,
+        &ShapeTreeWidget::onTreeSelectionChanged
+    );
     if (storage != nullptr)
     {
         storage->subscribe(this);
@@ -34,7 +42,12 @@ void ShapeTreeWidget::onStorageChanged()
 }
 void ShapeTreeWidget::rebuildTree()
 {
+    QSignalBlocker blocker(this);
+
     clear();
+
+    itemToOwner.clear();
+    rootItems.clear();
 
     if (storage == nullptr)
     {
@@ -47,15 +60,32 @@ void ShapeTreeWidget::rebuildTree()
 
         addShapeNode(
             invisibleRootItem(),
+            shape,
             shape
         );
+    }
+
+    for (int i = 0; i < storage->getCount(); ++i)
+    {
+        ::Shape* shape = storage->getObject(i);
+
+        if (shape->isSelected())
+        {
+            auto it = rootItems.find(shape);
+
+            if (it != rootItems.end())
+            {
+                it->second->setSelected(true);
+            }
+        }
     }
 
     expandAll();
 }
 void ShapeTreeWidget::addShapeNode(
     QTreeWidgetItem* parent,
-    ::Shape* shape
+    ::Shape* shape,
+    ::Shape* owner
 )
 {
     if (shape == nullptr)
@@ -70,6 +100,12 @@ void ShapeTreeWidget::addShapeNode(
         0,
         shape->typeName()
     );
+    itemToOwner[item] = owner;
+
+    if (shape == owner)
+    {
+        rootItems[owner] = item;
+    }
 
     Group* group =
         dynamic_cast<Group*>(shape);
@@ -81,6 +117,29 @@ void ShapeTreeWidget::addShapeNode(
 
     for (::Shape* child : group->getChildren())
     {
-        addShapeNode(item, child);
+        addShapeNode(item, child,owner);
     }
+}
+void ShapeTreeWidget::onTreeSelectionChanged()
+{
+    if (storage == nullptr)
+    {
+        return;
+    }
+
+    storage->clearSelection();
+
+    for (QTreeWidgetItem* item : selectedItems())
+    {
+        auto it = itemToOwner.find(item);
+
+        if (it != itemToOwner.end())
+        {
+            it->second->setSelected(true);
+        }
+    }
+
+    storage->notifyObservers();
+
+    emit shapeSelectionChanged();
 }
