@@ -48,13 +48,11 @@ add_executable(OOP7
         ShapeFactory.cpp
         ShapeFactory.h
 
-        StorageObserver.cpp
         StorageObserver.h
 
         ShapeTreeWidget.cpp
         ShapeTreeWidget.h
 
-        ShapeMoveObserver.cpp
         ShapeMoveObserver.h
 
         Arrow.cpp
