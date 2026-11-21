@@ -18,18 +18,18 @@ SnapshotCommand::SnapshotCommand(
 {
 }
 
-void SnapshotCommand::execute()
+bool SnapshotCommand::execute()
 {
-    storage.restoreSnapshot(
+    return storage.restoreSnapshot(
         afterState,
         factory,
         bounds
     );
 }
 
-void SnapshotCommand::undo()
+bool SnapshotCommand::undo()
 {
-    storage.restoreSnapshot(
+    return storage.restoreSnapshot(
         beforeState,
         factory,
         bounds
