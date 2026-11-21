@@ -15,7 +15,9 @@
 #include "ShapeFactory.h"
 
 #include <functional>
+
 class ShapeTreeWidget;
+
 class MainWindow : public QMainWindow
 {
 public:
@@ -28,6 +30,7 @@ public:
         Ellipse,
         Line
     };
+
     explicit MainWindow(QWidget *parent = nullptr);
 
 protected:
@@ -41,9 +44,11 @@ protected:
 private:
     bool dragging = false;
     QPoint lastMousePosition;
+
     void setupActions();
     QRect getWorkAreaRect() const;
     void changeSelectedColor();
+
     QAction *circleAction;
     QAction *rectangleAction;
     QAction *colorAction;
@@ -55,25 +60,24 @@ private:
     QAction* ungroupAction;
     QAction* saveAction;
     QAction* loadAction;
+    QAction* arrowAction;
+    QAction* undoAction;
 
     void saveProject();
     void loadProject();
     void ungroupSelected();
     void groupSelected();
+
     ShapeStorage storage;
     ShapeType currentShapeType = ShapeType::Circle;
     ShapeTreeWidget* shapeTree;
 
-    QAction* arrowAction;
-
     bool creatingArrow = false;
     Shape* arrowSource = nullptr;
     Shape* findShapeAt(const QPoint& point) const;
+
     CommandHistory commandHistory;
     DefaultShapeFactory undoFactory;
-
-    QAction* undoAction;
-
     QString dragStartSnapshot;
 
     void executeUndoable(
