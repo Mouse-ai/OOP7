@@ -19,8 +19,6 @@ public:
     Shape* getSource() const;
     Shape* getTarget() const;
 
-    bool references(Shape* shape) const;
-
     void draw(QPainter& painter) const;
 
     void onShapeMoved(
