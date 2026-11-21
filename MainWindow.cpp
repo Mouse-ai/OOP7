@@ -383,36 +383,59 @@ void MainWindow::setupActions()
 
 void MainWindow::ungroupSelected()
 {
+    bool hasSelectedGroup = false;
+
+    for (int i = 0; i < storage.getCount(); ++i)
+    {
+        Shape* shape = storage.getObject(i);
+
+        if (shape->isSelected() &&
+            dynamic_cast<Group*>(shape) != nullptr)
+        {
+            hasSelectedGroup = true;
+            break;
+        }
+    }
+
+    if (!hasSelectedGroup)
+    {
+        return;
+    }
+
     executeUndoable(
         [this]()
         {
-            std::vector<Shape*> selectedShapes =
+            for (int i = 0; i < storage.getCount(); ++i)
+            {
+                Shape* shape = storage.getObject(i);
+
+                if (shape->isSelected() &&
+                    dynamic_cast<Group*>(shape) == nullptr)
+                {
+                    shape->setSelected(false);
+                }
+            }
+
+            std::vector<Shape*> selectedGroups =
                 storage.takeSelected();
 
-            for (Shape* shape : selectedShapes)
+            for (Shape* shape : selectedGroups)
             {
                 Group* group =
                     dynamic_cast<Group*>(shape);
 
-                if (group != nullptr)
+                storage.removeArrowsDirectlyReferencing(group);
+
+                std::vector<Shape*> children =
+                    group->takeChildren();
+
+                for (Shape* child : children)
                 {
-                    storage.removeArrowsDirectlyReferencing(group);
-
-                    std::vector<Shape*> children =
-                        group->takeChildren();
-
-                    for (Shape* child : children)
-                    {
-                        child->setSelected(true);
-                        storage.add(child);
-                    }
-
-                    delete group;
+                    child->setSelected(true);
+                    storage.add(child);
                 }
-                else
-                {
-                    storage.add(shape);
-                }
+
+                delete group;
             }
         }
     );
