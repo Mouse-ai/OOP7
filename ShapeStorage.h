@@ -15,6 +15,10 @@ private:
     std::vector<StorageObserver*> observers;
     std::vector<Arrow*> arrows;
     bool containsShape(Shape* root,Shape* searched) const;
+    QString findPath(Shape* target) const;
+
+    bool findPathRecursive(Shape* current,Shape* target,const QString& currentPath,QString& result) const;
+    Shape* resolvePath(const std::vector<Shape*>& rootShapes,const QString& path) const;
 public:
     void add(Shape *shape);
 

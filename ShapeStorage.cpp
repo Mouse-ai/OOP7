@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "Arrow.h"
 #include "Group.h"
-
+#include <QStringList>
 void ShapeStorage::add(Shape *shape) {
     shapes.push_back(shape);
     notifyObservers();
@@ -98,6 +98,29 @@ bool ShapeStorage::saveToFile(const QString& fileName) const
     {
         shape->save(out);
     }
+    out << "ARROWS "
+    << arrows.size()
+    << "\n";
+
+    for (Arrow* arrow : arrows)
+    {
+        QString sourcePath =
+            findPath(arrow->getSource());
+
+        QString targetPath =
+            findPath(arrow->getTarget());
+
+        if (sourcePath.isEmpty() ||
+            targetPath.isEmpty())
+        {
+            return false;
+        }
+
+        out << sourcePath
+            << " "
+            << targetPath
+            << "\n";
+    }
 
     return out.status() == QTextStream::Ok;
 }
@@ -117,7 +140,6 @@ bool ShapeStorage::loadFromFile(
     QTextStream in(&file);
 
     int objectCount;
-
     in >> objectCount;
 
     if (in.status() != QTextStream::Ok ||
@@ -128,10 +150,10 @@ bool ShapeStorage::loadFromFile(
 
     std::vector<Shape*> loadedShapes;
 
+
     for (int i = 0; i < objectCount; ++i)
     {
         QString type;
-
         in >> type;
 
         if (in.status() != QTextStream::Ok)
@@ -183,6 +205,89 @@ bool ShapeStorage::loadFromFile(
         loadedShapes.push_back(shape);
     }
 
+    QString marker;
+    int arrowCount;
+
+    in >> marker >> arrowCount;
+
+    if (in.status() != QTextStream::Ok ||
+        marker != "ARROWS" ||
+        arrowCount < 0)
+    {
+        for (Shape* shape : loadedShapes)
+        {
+            delete shape;
+        }
+
+        return false;
+    }
+
+    std::vector<Arrow*> loadedArrows;
+
+    for (int i = 0; i < arrowCount; ++i)
+    {
+        QString sourcePath;
+        QString targetPath;
+
+        in >> sourcePath >> targetPath;
+
+        if (in.status() != QTextStream::Ok)
+        {
+            for (Arrow* arrow : loadedArrows)
+            {
+                delete arrow;
+            }
+
+            for (Shape* shape : loadedShapes)
+            {
+                delete shape;
+            }
+
+            return false;
+        }
+
+        Shape* source =
+            resolvePath(
+                loadedShapes,
+                sourcePath
+            );
+
+        Shape* target =
+            resolvePath(
+                loadedShapes,
+                targetPath
+            );
+
+        if (source == nullptr ||
+            target == nullptr ||
+            source == target)
+        {
+            for (Arrow* arrow : loadedArrows)
+            {
+                delete arrow;
+            }
+
+            for (Shape* shape : loadedShapes)
+            {
+                delete shape;
+            }
+
+            return false;
+        }
+
+        loadedArrows.push_back(
+            new Arrow(source, target)
+        );
+    }
+
+
+    for (Arrow* arrow : arrows)
+    {
+        delete arrow;
+    }
+
+    arrows.clear();
+
     for (Shape* shape : shapes)
     {
         delete shape;
@@ -190,8 +295,12 @@ bool ShapeStorage::loadFromFile(
 
     shapes.clear();
 
+    // Передаём новые объекты основному контейнеру.
     shapes.swap(loadedShapes);
+    arrows.swap(loadedArrows);
+
     notifyObservers();
+
     return true;
 }
 void ShapeStorage::subscribe(StorageObserver* observer)
@@ -316,4 +425,123 @@ void ShapeStorage::removeArrowsDirectlyReferencing(
             ++i;
         }
     }
+}
+QString ShapeStorage::findPath(Shape* target) const
+{
+    for (int i = 0; i < static_cast<int>(shapes.size()); ++i)
+    {
+        QString result;
+
+        if (findPathRecursive(
+                shapes[i],
+                target,
+                QString::number(i),
+                result))
+        {
+            return result;
+        }
+    }
+
+    return QString();
+}
+bool ShapeStorage::findPathRecursive(
+    Shape* current,
+    Shape* target,
+    const QString& currentPath,
+    QString& result
+) const
+{
+    if (current == target)
+    {
+        result = currentPath;
+        return true;
+    }
+
+    Group* group =
+        dynamic_cast<Group*>(current);
+
+    if (group == nullptr)
+    {
+        return false;
+    }
+
+    const std::vector<Shape*>& children =
+        group->getChildren();
+
+    for (int i = 0;
+         i < static_cast<int>(children.size());
+         ++i)
+    {
+        QString childPath =
+            currentPath + "/" +
+            QString::number(i);
+
+        if (findPathRecursive(
+                children[i],
+                target,
+                childPath,
+                result))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+Shape* ShapeStorage::resolvePath(
+    const std::vector<Shape*>& rootShapes,
+    const QString& path
+) const
+{
+    QStringList parts =
+        path.split('/');
+
+    if (parts.empty())
+    {
+        return nullptr;
+    }
+
+    bool ok = false;
+
+    int rootIndex =
+        parts[0].toInt(&ok);
+
+    if (!ok ||
+        rootIndex < 0 ||
+        rootIndex >= static_cast<int>(rootShapes.size()))
+    {
+        return nullptr;
+    }
+
+    Shape* current =
+        rootShapes[rootIndex];
+
+    for (int i = 1; i < parts.size(); ++i)
+    {
+        Group* group =
+            dynamic_cast<Group*>(current);
+
+        if (group == nullptr)
+        {
+            return nullptr;
+        }
+
+        int childIndex =
+            parts[i].toInt(&ok);
+
+        const std::vector<Shape*>& children =
+            group->getChildren();
+
+        if (!ok ||
+            childIndex < 0 ||
+            childIndex >= static_cast<int>(children.size()))
+        {
+            return nullptr;
+        }
+
+        current =
+            children[childIndex];
+    }
+
+    return current;
 }
