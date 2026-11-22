@@ -179,7 +179,6 @@ bool ShapeStorage::loadFromStream(
 )
 {
     int objectCount;
-
     in >> objectCount;
 
     if (in.status() != QTextStream::Ok ||
@@ -187,21 +186,47 @@ bool ShapeStorage::loadFromStream(
     {
         return false;
     }
+
     std::vector<Shape*> loadedShapes;
+    std::vector<Arrow*> loadedArrows;
 
-    for (int i = 0; i < objectCount; ++i)
-    {
-        QString type;
-
-        in >> type;
-
-        if (in.status() != QTextStream::Ok)
+    auto clearLoadedShapes =
+        [&loadedShapes]()
         {
             for (Shape* shape : loadedShapes)
             {
                 delete shape;
             }
 
+            loadedShapes.clear();
+        };
+
+    auto clearLoadedData =
+        [&loadedShapes, &loadedArrows]()
+        {
+            for (Arrow* arrow : loadedArrows)
+            {
+                delete arrow;
+            }
+
+            loadedArrows.clear();
+
+            for (Shape* shape : loadedShapes)
+            {
+                delete shape;
+            }
+
+            loadedShapes.clear();
+        };
+
+    for (int i = 0; i < objectCount; ++i)
+    {
+        QString type;
+        in >> type;
+
+        if (in.status() != QTextStream::Ok)
+        {
+            clearLoadedShapes();
             return false;
         }
 
@@ -210,40 +235,21 @@ bool ShapeStorage::loadFromStream(
 
         if (shape == nullptr)
         {
-            for (Shape* loadedShape : loadedShapes)
-            {
-                delete loadedShape;
-            }
-
+            clearLoadedShapes();
             return false;
         }
 
-        if (!shape->load(in, factory))
+        if (!shape->load(in, factory) ||
+            !shape->fitsInBounds(bounds))
         {
             delete shape;
-
-            for (Shape* loadedShape : loadedShapes)
-            {
-                delete loadedShape;
-            }
-
-            return false;
-        }
-
-        if (!shape->fitsInBounds(bounds))
-        {
-            delete shape;
-
-            for (Shape* loadedShape : loadedShapes)
-            {
-                delete loadedShape;
-            }
-
+            clearLoadedShapes();
             return false;
         }
 
         loadedShapes.push_back(shape);
     }
+
     QString marker;
     int arrowCount;
 
@@ -253,16 +259,9 @@ bool ShapeStorage::loadFromStream(
         marker != "ARROWS" ||
         arrowCount < 0)
     {
-        for (Shape* shape : loadedShapes)
-        {
-            delete shape;
-        }
-
+        clearLoadedShapes();
         return false;
     }
-
-
-    std::vector<Arrow*> loadedArrows;
 
     for (int i = 0; i < arrowCount; ++i)
     {
@@ -274,17 +273,7 @@ bool ShapeStorage::loadFromStream(
 
         if (in.status() != QTextStream::Ok)
         {
-            // Сначала стрелки, потом фигуры.
-            for (Arrow* arrow : loadedArrows)
-            {
-                delete arrow;
-            }
-
-            for (Shape* shape : loadedShapes)
-            {
-                delete shape;
-            }
-
+            clearLoadedData();
             return false;
         }
 
@@ -304,16 +293,7 @@ bool ShapeStorage::loadFromStream(
             target == nullptr ||
             source == target)
         {
-            for (Arrow* arrow : loadedArrows)
-            {
-                delete arrow;
-            }
-
-            for (Shape* shape : loadedShapes)
-            {
-                delete shape;
-            }
-
+            clearLoadedData();
             return false;
         }
 
@@ -324,6 +304,7 @@ bool ShapeStorage::loadFromStream(
             )
         );
     }
+
     for (Arrow* arrow : arrows)
     {
         delete arrow;
@@ -331,13 +312,13 @@ bool ShapeStorage::loadFromStream(
 
     arrows.clear();
 
-
     for (Shape* shape : shapes)
     {
         delete shape;
     }
 
     shapes.clear();
+
     shapes.swap(loadedShapes);
     arrows.swap(loadedArrows);
 
@@ -345,7 +326,6 @@ bool ShapeStorage::loadFromStream(
 
     return true;
 }
-
 
 bool ShapeStorage::loadFromFile(
     const QString& fileName,
@@ -395,11 +375,8 @@ void ShapeStorage::subscribe(
     StorageObserver* observer
 )
 {
-    if (observer == nullptr)
-    {
-        return;
-    }
-    if (std::find(
+    if (observer != nullptr &&
+        std::find(
             observers.begin(),
             observers.end(),
             observer
@@ -436,12 +413,10 @@ void ShapeStorage::addArrow(
     Arrow* arrow
 )
 {
-    if (arrow == nullptr)
+    if (arrow != nullptr)
     {
-        return;
+        arrows.push_back(arrow);
     }
-
-    arrows.push_back(arrow);
 }
 
 
