@@ -86,6 +86,14 @@ void MainWindow::recordCommand(
         return;
     }
 
+    if (!storage.restoreSnapshot(
+            beforeState,
+            undoFactory,
+            getWorkAreaRect()))
+    {
+        return;
+    }
+
     commandHistory.execute(
         std::make_unique<SnapshotCommand>(
             storage,
