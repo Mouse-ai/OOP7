@@ -181,10 +181,7 @@ void MainWindow::setupActions()
         undoAction,
         &QAction::triggered,
         this,
-        [this]()
-        {
-            undoLastCommand();
-        }
+        &MainWindow::undoLastCommand
     );
 
     connect(
@@ -211,30 +208,21 @@ void MainWindow::setupActions()
         saveAction,
         &QAction::triggered,
         this,
-        [this]()
-        {
-            saveProject();
-        }
+        &MainWindow::saveProject
     );
 
     connect(
         loadAction,
         &QAction::triggered,
         this,
-        [this]()
-        {
-            loadProject();
-        }
+        &MainWindow::loadProject
     );
 
     connect(
         groupAction,
         &QAction::triggered,
         this,
-        [this]()
-        {
-            groupSelected();
-        }
+        &MainWindow::groupSelected
     );
 
     connect(
@@ -261,10 +249,7 @@ void MainWindow::setupActions()
         colorAction,
         &QAction::triggered,
         this,
-        [this]()
-        {
-            changeSelectedColor();
-        }
+        &MainWindow::changeSelectedColor
     );
 
     connect(
@@ -369,10 +354,7 @@ void MainWindow::setupActions()
         ungroupAction,
         &QAction::triggered,
         this,
-        [this]()
-        {
-            ungroupSelected();
-        }
+        &MainWindow::ungroupSelected
     );
 
     ungroupAction->setShortcut(
