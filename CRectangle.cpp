@@ -22,16 +22,7 @@ bool CRectangle::contains(int pointX, int pointY) const {
 void CRectangle::draw(QPainter &painter) const {
     painter.save();
     QPen pen;
-    if (selected)
-    {
-        pen.setColor(Qt::red);
-
-    }
-    else
-    {
-        pen.setColor(color);
-
-    }
+    pen.setColor(selected ? Qt::red : color);
     pen.setWidth(3);
     painter.setPen(pen);
     painter.drawRect(
