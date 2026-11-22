@@ -236,7 +236,7 @@ bool ShapeStorage::loadFromStream(
         };
 
     auto clearLoadedData =
-        [&loadedShapes, &loadedArrows]()
+        [&loadedArrows, &clearLoadedShapes]()
         {
             for (Arrow* arrow : loadedArrows)
             {
@@ -244,13 +244,7 @@ bool ShapeStorage::loadFromStream(
             }
 
             loadedArrows.clear();
-
-            for (Shape* shape : loadedShapes)
-            {
-                delete shape;
-            }
-
-            loadedShapes.clear();
+            clearLoadedShapes();
         };
 
     for (int i = 0; i < objectCount; ++i)
