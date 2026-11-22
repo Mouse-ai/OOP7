@@ -118,12 +118,12 @@ bool Group::moveWithContext(
     return true;
 }
 
-bool Group::canResize(int delta) const
+bool Group::canResize(int) const
 {
     return false;
 }
 
-void Group::changeSize(int delta)
+void Group::changeSize(int)
 {
 }
 
@@ -179,6 +179,17 @@ bool Group::load(
 
     std::vector<Shape*> loadedChildren;
 
+    auto clearLoadedChildren =
+        [&loadedChildren]()
+        {
+            for (Shape* shape : loadedChildren)
+            {
+                delete shape;
+            }
+
+            loadedChildren.clear();
+        };
+
     for (int i = 0; i < childCount; ++i)
     {
         QString type;
@@ -187,11 +198,7 @@ bool Group::load(
 
         if (in.status() != QTextStream::Ok)
         {
-            for (Shape* shape : loadedChildren)
-            {
-                delete shape;
-            }
-
+            clearLoadedChildren();
             return false;
         }
 
@@ -200,23 +207,14 @@ bool Group::load(
 
         if (child == nullptr)
         {
-            for (Shape* shape : loadedChildren)
-            {
-                delete shape;
-            }
-
+            clearLoadedChildren();
             return false;
         }
 
         if (!child->load(in, factory))
         {
             delete child;
-
-            for (Shape* shape : loadedChildren)
-            {
-                delete shape;
-            }
-
+            clearLoadedChildren();
             return false;
         }
 
