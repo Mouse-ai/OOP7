@@ -24,7 +24,8 @@ private:
     bool loadFromStream(
         QTextStream& in,
         const ShapeFactory& factory,
-        const QRect& bounds
+        const QRect& bounds,
+        bool notifyAfterLoad = true
     );
 public:
     void add(Shape *shape);
