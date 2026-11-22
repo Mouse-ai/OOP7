@@ -19,12 +19,8 @@ bool CommandHistory::execute(
 
 bool CommandHistory::undo()
 {
-    if (commands.empty())
-    {
-        return false;
-    }
-
-    if (!commands.back()->undo())
+    if (commands.empty() ||
+        !commands.back()->undo())
     {
         return false;
     }
