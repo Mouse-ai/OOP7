@@ -2,8 +2,8 @@
 // Created by alexei on 25.10.2026.
 //
 
-#ifndef OOP4_SHAPESTORAGE_H
-#define OOP4_SHAPESTORAGE_H
+#ifndef OOP7_SHAPESTORAGE_H
+#define OOP7_SHAPESTORAGE_H
 #include <vector>
 #include "Shape.h"
 #include "StorageObserver.h"
@@ -62,4 +62,4 @@ public:
 };
 
 
-#endif //OOP4_SHAPESTORAGE_H
+#endif //OOP7_SHAPESTORAGE_H
