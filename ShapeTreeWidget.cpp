@@ -63,20 +63,10 @@ void ShapeTreeWidget::rebuildTree()
             shape,
             shape
         );
-    }
-
-    for (int i = 0; i < storage->getCount(); ++i)
-    {
-        ::Shape* shape = storage->getObject(i);
 
         if (shape->isSelected())
         {
-            auto it = rootItems.find(shape);
-
-            if (it != rootItems.end())
-            {
-                it->second->setSelected(true);
-            }
+            rootItems[shape]->setSelected(true);
         }
     }
 
