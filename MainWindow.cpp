@@ -81,12 +81,8 @@ void MainWindow::recordCommand(
 
     if (beforeState.isEmpty() ||
         afterState.isEmpty() ||
-        beforeState == afterState)
-    {
-        return;
-    }
-
-    if (!storage.restoreSnapshot(
+        beforeState == afterState ||
+        !storage.restoreSnapshot(
             beforeState,
             undoFactory,
             getWorkAreaRect()))
