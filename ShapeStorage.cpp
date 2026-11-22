@@ -175,12 +175,41 @@ QString ShapeStorage::createSnapshot() const
         return QString();
     }
 
-    return data;
+    int selectedCount = 0;
+
+    for (Shape* shape : shapes)
+    {
+        if (shape->isSelected())
+        {
+            ++selectedCount;
+        }
+    }
+
+    out << "SELECTION "
+        << selectedCount
+        << "\n";
+
+    for (int i = 0;
+         i < static_cast<int>(shapes.size());
+         ++i)
+    {
+        if (shapes[i]->isSelected())
+        {
+            out << i << " ";
+        }
+    }
+
+    out << "\n";
+
+    return out.status() == QTextStream::Ok
+        ? data
+        : QString();
 }
 bool ShapeStorage::loadFromStream(
     QTextStream& in,
     const ShapeFactory& factory,
-    const QRect& bounds
+    const QRect& bounds,
+    bool notifyAfterLoad
 )
 {
     int objectCount;
@@ -327,7 +356,10 @@ bool ShapeStorage::loadFromStream(
     shapes.swap(loadedShapes);
     arrows.swap(loadedArrows);
 
-    notifyObservers();
+    if (notifyAfterLoad)
+    {
+        notifyObservers();
+    }
 
     return true;
 }
@@ -370,11 +402,47 @@ bool ShapeStorage::restoreSnapshot(
         QIODevice::ReadOnly
     );
 
-    return loadFromStream(
-        in,
-        factory,
-        bounds
-    );
+    if (!loadFromStream(
+            in,
+            factory,
+            bounds,
+            false))
+    {
+        return false;
+    }
+
+    QString marker;
+    int selectedCount;
+
+    in >> marker >> selectedCount;
+
+    if (in.status() != QTextStream::Ok ||
+        marker != "SELECTION" ||
+        selectedCount < 0)
+    {
+        notifyObservers();
+        return false;
+    }
+
+    for (int i = 0; i < selectedCount; ++i)
+    {
+        int index;
+        in >> index;
+
+        if (in.status() != QTextStream::Ok ||
+            index < 0 ||
+            index >= static_cast<int>(shapes.size()))
+        {
+            notifyObservers();
+            return false;
+        }
+
+        shapes[index]->setSelected(true);
+    }
+
+    notifyObservers();
+
+    return true;
 }
 void ShapeStorage::subscribe(
     StorageObserver* observer
