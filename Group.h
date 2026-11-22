@@ -2,8 +2,8 @@
 // Created by alexei on 14.11.2026.
 //
 
-#ifndef OOP6_GROUP_H
-#define OOP6_GROUP_H
+#ifndef OOP7_GROUP_H
+#define OOP7_GROUP_H
 
 #include "Shape.h"
 #include <vector>
