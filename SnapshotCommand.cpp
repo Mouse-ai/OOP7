@@ -20,11 +20,6 @@ SnapshotCommand::SnapshotCommand(
 
 bool SnapshotCommand::execute()
 {
-    if (storage.createSnapshot() == afterState)
-    {
-        return true;
-    }
-
     return storage.restoreSnapshot(
         afterState,
         factory,
