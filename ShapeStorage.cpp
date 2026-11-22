@@ -57,6 +57,7 @@ ShapeStorage::~ShapeStorage()
 
 void ShapeStorage::removeSelected()
 {
+    bool changed = false;
     size_t i = 0;
 
     while (i < shapes.size())
@@ -67,6 +68,7 @@ void ShapeStorage::removeSelected()
 
             delete shapes[i];
             shapes.erase(shapes.begin() + i);
+            changed = true;
         }
         else
         {
@@ -74,7 +76,10 @@ void ShapeStorage::removeSelected()
         }
     }
 
-    notifyObservers();
+    if (changed)
+    {
+        notifyObservers();
+    }
 }
 
 
