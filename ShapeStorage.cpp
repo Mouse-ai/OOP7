@@ -267,12 +267,54 @@ bool ShapeStorage::loadFromStream(
             return false;
         }
 
-        if (!shape->load(in, factory) ||
-            !shape->fitsInBounds(bounds))
+        if (!shape->load(in, factory))
         {
             delete shape;
             clearLoadedShapes();
             return false;
+        }
+
+        if (!shape->fitsInBounds(bounds))
+        {
+            QRect shapeRect = shape->boundingRect();
+
+            if (shapeRect.width() > bounds.width() ||
+                shapeRect.height() > bounds.height())
+            {
+                delete shape;
+                clearLoadedShapes();
+                return false;
+            }
+
+            int dx = 0;
+            int dy = 0;
+
+            if (shapeRect.left() < bounds.left())
+            {
+                dx = bounds.left() - shapeRect.left();
+            }
+            else if (shapeRect.right() > bounds.right())
+            {
+                dx = bounds.right() - shapeRect.right();
+            }
+
+            if (shapeRect.top() < bounds.top())
+            {
+                dy = bounds.top() - shapeRect.top();
+            }
+            else if (shapeRect.bottom() > bounds.bottom())
+            {
+                dy = bounds.bottom() - shapeRect.bottom();
+            }
+
+            shape->move(dx, dy, bounds);
+
+            if (!shape->fitsInBounds(bounds))
+            {
+                delete shape;
+                clearLoadedShapes();
+                return false;
+            }
         }
 
         loadedShapes.push_back(shape);
