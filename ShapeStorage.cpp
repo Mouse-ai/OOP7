@@ -279,16 +279,31 @@ bool ShapeStorage::loadFromStream(
     }
 
     QString marker;
-    int arrowCount;
+    int arrowCount = 0;
 
-    in >> marker >> arrowCount;
+    in >> marker;
 
-    if (in.status() != QTextStream::Ok ||
-        marker != "ARROWS" ||
-        arrowCount < 0)
+    // Files from OOP6 end immediately after the shapes.
+    // In that format there is no ARROWS section, so EOF here
+    // means a valid legacy file with zero arrows.
+    const bool legacyOop6File =
+        in.status() == QTextStream::ReadPastEnd;
+
+    if (legacyOop6File)
     {
-        clearLoadedShapes();
-        return false;
+        in.resetStatus();
+    }
+    else
+    {
+        in >> arrowCount;
+
+        if (in.status() != QTextStream::Ok ||
+            marker != "ARROWS" ||
+            arrowCount < 0)
+        {
+            clearLoadedShapes();
+            return false;
+        }
     }
 
     for (int i = 0; i < arrowCount; ++i)
